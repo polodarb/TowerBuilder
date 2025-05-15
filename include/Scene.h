@@ -1,13 +1,15 @@
 #ifndef Scene_h
 #define Scene_h
 
+#include <Floor.h>
+
 #include "Board.h"
 #include <vector>
 
 namespace TownBuilder {
     class Scene {
-        std::vector<Board*> blocks;
-        Board* current;
+        std::vector<Floor*> blocks;
+        Floor* current;
         float blockWidth, blockHeight, blockDepth;
 
         bool movingRight;

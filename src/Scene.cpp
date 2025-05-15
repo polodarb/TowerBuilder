@@ -1,9 +1,10 @@
 #include "Scene.h"
-#include "Floor.h"
+#include "Board.h"
 #include "utils.h"
 #include <gl/glut.h>
 #include <cmath>
 #include <cstdio>
+#include <Floor.h>
 using namespace GraphUtils;
 
 namespace TownBuilder {
@@ -14,9 +15,9 @@ namespace TownBuilder {
           xMin(-2.0f),
           xMax(2.0f),
           moveSpeed(0.05f),
-          angleX(-10),
+          angleX(0),
           angleY(20),
-          distZ(-3.5f),
+          distZ(-0.5f),
           score(0),
           finish(false),
           tick(0),
@@ -27,24 +28,25 @@ namespace TownBuilder {
     }
 
     Scene::~Scene() {
-        for (auto* b : blocks) delete b;
+        for (auto *b: blocks) delete b;
         delete current;
     }
 
     void Scene::initGame() {
-        for (auto* b : blocks) delete b;
+        for (auto *b: blocks) delete b;
         blocks.clear();
         score = 0;
         finish = false;
         time = 0;
 
-        blocks.push_back(new Board(0, 0, 0, blockWidth, blockHeight, blockDepth, diffGray, ambiGray, specGray));
+        blocks.push_back(new Floor(0, 0, 0, blockWidth, blockHeight, blockDepth, diffGray, ambiGray, specGray, diffRed, specRed));
         spawnBlock();
     }
 
     void Scene::spawnBlock() {
         float y = static_cast<float>(blocks.size()) * blockHeight;
-        current = new Board(xMin, y, 0, blockWidth, blockHeight, blockDepth, diffGreen, ambiGreen, specGreen);
+        current = new Floor(xMin, y, 0, blockWidth, blockHeight, blockDepth, diffYellowOrange, ambiYellowOrange,
+                            specYellowOrange, diffRed, specRed);
         movingRight = true;
     }
 
@@ -52,7 +54,11 @@ namespace TownBuilder {
         if (finish || !current) return;
 
         float dx = std::abs(current->getX() - blocks.back()->getX());
+
         if (dx > blockWidth / 2) {
+            current->isFailed = true;
+            blocks.push_back(current); // важно: добавляем блок в сцену
+            current = nullptr;
             finish = true;
             return;
         }
@@ -60,8 +66,6 @@ namespace TownBuilder {
         current->setY(static_cast<float>(blocks.size()) * blockHeight);
         blocks.push_back(current);
         score++;
-
-        distZ -= 0.2f;
 
         spawnBlock();
     }
@@ -72,10 +76,10 @@ namespace TownBuilder {
 
         glViewport(0, 0, width, height);
 
-        float lightAmbient[] = { 0, 0, 0, 1 };
-        float lightDiffuse[] = { 1, 1, 1, 1 };
-        float lightSpecular[] = { 1, 1, 1, 1 };
-        float lightPosition[] = { 1, 1, 1, 0 };
+        float lightAmbient[] = {0, 0, 0, 1};
+        float lightDiffuse[] = {1, 1, 1, 1};
+        float lightSpecular[] = {1, 1, 1, 1};
+        float lightPosition[] = {1, 1, 1, 0};
 
         glLightfv(GL_LIGHT0, GL_AMBIENT, lightAmbient);
         glLightfv(GL_LIGHT0, GL_DIFFUSE, lightDiffuse);
@@ -98,18 +102,25 @@ namespace TownBuilder {
         glMatrixMode(GL_PROJECTION);
         glLoadIdentity();
         gluPerspective(60, width / height, 1, 100);
+
+
         glMatrixMode(GL_MODELVIEW);
         glLoadIdentity();
+
+        glTranslatef(0, 0, distZ);
         glTranslatef(0, -score * blockHeight, -5.0f);
+
+        glRotatef(angleX, 0, 1, 0);
         glRotatef(angleY, 1, 0, 0);
+
         glEnable(GL_DEPTH_TEST);
         glEnable(GL_LIGHTING);
         glEnable(GL_LIGHT0);
 
-        Floor floor(0, -0.05f, 0, 5.0f, 0.05f, 5.0f, diffGray, ambiGray, specGray);
-        floor.draw();
+        Board board(0, -blockHeight / 2, 0, 5.0f, 0.05f, 5.0f, diffGray, ambiGray, specGray);
+        board.draw();
 
-        for (auto* b : blocks) b->draw();
+        for (auto *b: blocks) b->draw();
         if (!finish && current) current->draw();
 
         glDisable(GL_LIGHT0);
@@ -127,21 +138,26 @@ namespace TownBuilder {
     void Scene::on_mouse(int button, int state, int x, int y) {
         mouseX = x;
         mouseY = y;
-        if (state == GLUT_UP && !finish) dropBlock();
-        this->button = (state == GLUT_DOWN) ? button : -1;
+
+        if (state == GLUT_UP) {
+            this->button = -1;
+            return;
+        }
+
+        this->button = button;
     }
 
     void Scene::on_motion(int x, int y) {
         if (button == GLUT_RIGHT_BUTTON) {
             angleX += x - mouseX;
             angleY += y - mouseY;
-            mouseX = x;
-            mouseY = y;
         }
+        mouseX = x;
+        mouseY = y;
     }
 
     void Scene::on_special(int key, int, int) {
-        if (key == GLUT_KEY_UP && distZ < -1.5f) distZ += 0.1f;
+        if (key == GLUT_KEY_UP && distZ < 1.0f) distZ += 0.1f;
         if (key == GLUT_KEY_DOWN) distZ -= 0.1f;
         if (key == GLUT_KEY_F2) initGame();
     }

@@ -8,6 +8,8 @@ namespace TownBuilder {
         float* diffColor;
         float* ambiColor;
         float* specColor;
+        bool isFailed = false;
+
     public:
         Board(float x, float y, float z,
               float width, float height, float depth,

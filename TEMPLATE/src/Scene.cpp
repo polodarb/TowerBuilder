@@ -163,7 +163,7 @@ namespace DiskGame
         allocateDisks(); // розташування дисків відповідно до масиву fields
                          // Ініціалізація елементів даних:
         distZ = -2;
-        angleX = -10;
+        angleX = -0;
         angleY = 30;
         time = 0;
         finish = false;
